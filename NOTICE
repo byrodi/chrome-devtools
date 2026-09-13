@@ -1,0 +1,28 @@
+chrome-devtools skill
+Copyright 2026 Rodion Masalov
+
+This product includes material from Chrome DevTools for agents
+(chrome-devtools-mcp), https://github.com/ChromeDevTools/chrome-devtools-mcp
+Copyright 2026 Google LLC
+Licensed under the Apache License, Version 2.0.
+
+skills/chrome-devtools/SKILL.md is derived from skills/chrome-devtools/SKILL.md
+of chrome-devtools-mcp at commit d9a8cb6ec22aadf5cb964c5e97a8b047693046e2
+(main, 2026-09-11). The file was last changed upstream in commit
+50a16fae69c5c28990328160f79db50af260e256 and ships in release
+chrome-devtools-mcp-v1.9.0.
+
+Modifications made to the upstream text:
+- Rewrote the frontmatter description with concrete triggers and exclusions.
+- Moved the --slim note from the description into the body.
+- Fixed typos and brought tool parameters in line with the upstream tool
+  reference (wait_for text lists, resourceTypes filter, requestFilePath and
+  responseFilePath, includeSnapshot default, waitForStableDom, flags for
+  optional tool groups, file path restrictions).
+- Reworded list items that used bold labels.
+- Added sections on switching from WebFetch to the browser, pacing for rate
+  limited marketplaces with scripts/throttle.sh, diagnosing blocks, site
+  notes and a rule against bypassing anti-bot protections.
+
+scripts/throttle.sh, references/setup.md, README.md and the plugin manifest
+are original to this repository.
