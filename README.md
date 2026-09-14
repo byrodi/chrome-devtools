@@ -1,32 +1,55 @@
 # chrome-devtools
 
-A skill for Claude Code and Codex that drives a real Chrome through [chrome-devtools-mcp](https://github.com/ChromeDevTools/chrome-devtools-mcp). It tells the agent how to use the DevTools tools efficiently, when to leave WebFetch for the browser, and how to read rate-limited Russian marketplaces without getting blocked.
+Agent skill that drives a real Chrome through chrome-devtools-mcp when WebFetch cannot read a page.
 
-## Features
+A skill for Claude Code and Codex. The agent switches to the browser for client-rendered pages, blocks, captchas and logins, and reads rate-limited marketplaces at a human pace.
 
-- Usage guide for the chrome-devtools-mcp tools, based on the upstream skill and checked against the current tool reference.
-- Clear triggers for switching from WebFetch to the browser: client-side rendering, 403 or 429, redirect loops, captcha and access-denied stubs, pages behind a login.
-- Pacing rules for Ozon, Avito and Wildberries with a small throttle script that spaces page loads per host and warns when a session budget is exceeded.
-- A checklist for diagnosing blocks (VPN or datacenter IP first, then pace, then cold session).
-- A hard rule against captcha solvers, anti-detect browsers, proxy rotation and fingerprint spoofing.
+## What you get
+
+- Efficient use of the [chrome-devtools-mcp](https://github.com/ChromeDevTools/chrome-devtools-mcp) tools: snapshots, network, console, traces
+- Clear rules for when to leave WebFetch for the browser
+- Paced reading of Ozon, Avito and Wildberries without getting blocked
+- A checklist for diagnosing blocks, starting with VPN and IP
+- No captcha solvers, proxy rotation or fingerprint spoofing
+
+## Usage
+
+Run `/chrome-devtools:chrome-devtools` or let the agent pick it up from a request:
+
+```text
+find the price of this product on Ozon
+WebFetch returns 403 on this page, open it in the browser
+check the console errors on localhost:3000
+```
+
+Before every marketplace page load the skill runs a throttle script that spaces loads per host and warns when a session budget is used up:
+
+```sh
+bash skills/chrome-devtools/scripts/throttle.sh ozon.ru 6
+```
 
 ## Requirements
 
 - Node.js LTS with `npx`
 - Google Chrome, current stable
-- chrome-devtools-mcp, started through `npx`
 - Claude Code or Codex CLI
-- bash, for `scripts/throttle.sh`
 
-## MCP server setup
+## Install
 
-Register the server with a dedicated, persistent Chrome profile. Logins made in that profile survive between sessions.
+Clone the repository:
+
+```sh
+git clone https://github.com/byrodi/chrome-devtools ~/IdeaProjects/skills/chrome-devtools
+```
+
+Then register the MCP server with a dedicated Chrome profile, so logins survive between sessions, and link the skill.
 
 Claude Code:
 
 ```sh
 claude mcp add chrome-devtools --scope user -- \
   npx -y chrome-devtools-mcp@latest --userDataDir "$HOME/chrome-agent" --viewport 1440x900
+ln -s ~/IdeaProjects/skills/chrome-devtools ~/.claude/skills/chrome-devtools
 ```
 
 Codex:
@@ -34,58 +57,13 @@ Codex:
 ```sh
 codex mcp add chrome-devtools -- \
   npx -y chrome-devtools-mcp@latest --userDataDir "$HOME/chrome-agent" --viewport 1440x900
-```
-
-Restart the client afterwards, MCP tools load only at session start. Profile details, optional flags and timeout notes are in [skills/chrome-devtools/references/setup.md](skills/chrome-devtools/references/setup.md).
-
-## Install for Claude Code
-
-```sh
-git clone https://github.com/stependiant/chrome-devtools ~/IdeaProjects/skills/chrome-devtools
-ln -s ~/IdeaProjects/skills/chrome-devtools ~/.claude/skills/chrome-devtools
-```
-
-Claude Code loads the folder as the plugin `chrome-devtools@skills-dir`. The model picks the skill up from its description, or you invoke it explicitly with `/chrome-devtools:chrome-devtools`.
-
-## Install for Codex
-
-Codex needs the skill folder itself, not the plugin root:
-
-```sh
 ln -s ~/IdeaProjects/skills/chrome-devtools/skills/chrome-devtools ~/.agents/skills/chrome-devtools
 ```
 
-SKILL.md refers to bundled files as `${CLAUDE_SKILL_DIR}/...`. Claude Code substitutes the variable, and the skill tells other agents that it means the folder containing SKILL.md.
-
-## Pacing rules in short
-
-- Run `throttle.sh <host> <min_seconds>` before every page load on a marketplace. Avito needs 10 seconds, Ozon and Wildberries 6.
-- Keep one tab per domain and navigate sequentially. No parallel calls against one host.
-- Follow links from search results by clicking, and extract data from the loaded page (JSON-LD, embedded state, network responses) before opening more pages.
-- Open product pages only for the final two or three candidates.
-- After a block, stop, back off for a few minutes and try once. If that fails, hand the browser to the human.
-- When the stub mentions VPN or IP, check the external IP before touching the pace.
-
-## Layout
-
-```
-chrome-devtools/
-├── .claude-plugin/
-│   └── plugin.json
-├── skills/
-│   └── chrome-devtools/
-│       ├── SKILL.md
-│       ├── references/
-│       │   └── setup.md
-│       └── scripts/
-│           └── throttle.sh
-├── LICENSE
-├── NOTICE
-└── README.md
-```
+Restart the client afterwards, MCP tools load only at session start. Update with `git pull` in the clone. Profile details, optional flags and timeout notes are in [setup.md](skills/chrome-devtools/references/setup.md).
 
 ## Credits and license
 
-The generic tool guidance in SKILL.md is adapted from the `chrome-devtools` skill in [ChromeDevTools/chrome-devtools-mcp](https://github.com/ChromeDevTools/chrome-devtools-mcp), Copyright 2026 Google LLC, licensed under Apache-2.0. [NOTICE](NOTICE) lists the upstream commit and the modifications.
+The generic tool guidance in SKILL.md is adapted from the `chrome-devtools` skill in [ChromeDevTools/chrome-devtools-mcp](https://github.com/ChromeDevTools/chrome-devtools-mcp), Copyright 2026 Google LLC, Apache-2.0. [NOTICE](NOTICE) lists the upstream commit and the modifications.
 
-This repository is licensed under the [Apache License 2.0](LICENSE).
+Released under the [Apache License 2.0](LICENSE).

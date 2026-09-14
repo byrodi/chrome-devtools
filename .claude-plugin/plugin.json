@@ -1,10 +1,10 @@
 {
   "name": "chrome-devtools",
-  "description": "Drive a real Chrome through chrome-devtools-mcp as a WebFetch fallback for client-rendered, blocked or login-only pages, for page debugging and for paced reading of Ozon, Avito and Wildberries without bypassing protections.",
+  "description": "Agent skill that drives a real Chrome through chrome-devtools-mcp when WebFetch cannot read a page.",
   "author": {
     "name": "Rodion Masalov",
-    "url": "https://github.com/stependiant"
+    "url": "https://github.com/byrodi"
   },
-  "repository": "https://github.com/stependiant/chrome-devtools",
+  "repository": "https://github.com/byrodi/chrome-devtools",
   "license": "Apache-2.0"
 }

@@ -1,0 +1,42 @@
+name: Bug report
+description: The skill or one of its scripts does not work as documented
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Search [existing issues](https://github.com/byrodi/chrome-devtools/issues?q=is%3Aissue) first. Security problems go to a [private report](https://github.com/byrodi/chrome-devtools/security/advisories/new), not here.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: request
+    attributes:
+      label: Request that broke
+      description: The prompt you gave the agent, or the script command you ran.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Skill commit
+      description: Output of `git rev-parse --short HEAD` in your clone.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Agent and environment
+      description: Agent and its version (for example Claude Code or Codex), OS, Chrome and chrome-devtools-mcp versions.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Script output or an excerpt of the agent transcript. It is formatted as code automatically.
+      render: shell
