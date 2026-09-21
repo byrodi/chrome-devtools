@@ -20,9 +20,12 @@ Modifications made to the upstream text:
   responseFilePath, includeSnapshot default, waitForStableDom, flags for
   optional tool groups, file path restrictions).
 - Reworded list items that used bold labels.
-- Added sections on switching from WebFetch to the browser, pacing for rate
-  limited marketplaces with scripts/throttle.sh, diagnosing blocks, site
-  notes and a rule against bypassing anti-bot protections.
+- Limited the skill to attaching to the user's running Chrome (--autoConnect):
+  rewrote the core concepts, removed the extension testing section and the
+  extension tools flag, which need a browser launched by the server.
+- Added sections on switching from WebFetch to the browser, pacing for every
+  site with scripts/throttle.sh and a Claude Code hook, diagnosing blocks
+  and a rule against bypassing anti-bot protections.
 
-scripts/throttle.sh, references/setup.md, README.md and the plugin manifest
+scripts/throttle.sh, scripts/throttle-hook.sh, references/setup.md, README.md and the plugin manifest
 are original to this repository.
