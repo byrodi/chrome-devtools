@@ -2,12 +2,14 @@
 
 Agent skill that drives a real Chrome through chrome-devtools-mcp when WebFetch cannot read a page.
 
-A skill for Claude Code and Codex. The agent switches to the browser for client-rendered pages, blocks, captchas and logins, and loads every site at a human pace so anti-bot systems do not trip.
+A skill for Claude Code and Codex. The agent switches to the browser for client-rendered pages, blocks, captchas and logins, and loads every site at a human pace so anti-bot systems do not trip. By default it works in a separate Chrome with a temporary profile and touches your everyday Chrome only when a task needs your logins.
 
 ## What you get
 
 - Efficient use of the [chrome-devtools-mcp](https://github.com/ChromeDevTools/chrome-devtools-mcp) tools: snapshots, network, console, traces
 - Clear rules for when to leave WebFetch for the browser
+- A separate agent browser by default, your own Chrome only for tasks that need your session
+- A script that finds the frozen tabs that make an attached Chrome hang
 - Paced page loads on every site with a random 1 to 5 second interval per site
 - A Claude Code hook that applies the pacing to every navigation automatically
 - A checklist for diagnosing blocks, starting with VPN and IP
@@ -31,8 +33,8 @@ bash skills/chrome-devtools/scripts/throttle.sh https://example.com/
 
 ## Requirements
 
-- Node.js LTS with `npx`
-- Google Chrome 144 or newer, with remote debugging turned on in `chrome://inspect/#remote-debugging`
+- Node.js 22 or newer
+- Google Chrome 144 or newer. For your everyday browser turn on remote debugging in `chrome://inspect/#remote-debugging`
 - Claude Code or Codex CLI
 - `jq` for the Claude Code hook (ships with macOS 15 and newer)
 
@@ -44,12 +46,14 @@ Clone the repository:
 git clone https://github.com/byrodi/chrome-devtools ~/IdeaProjects/skills/chrome-devtools
 ```
 
-Then register the MCP server and link the skill. The server attaches to your everyday Chrome with its logins, it does not launch a separate browser.
+Then register the two MCP servers and link the skill. `chrome-devtools` launches a separate Chrome with a temporary profile and is the default. `chrome-personal` attaches to your everyday Chrome with its logins.
 
 Claude Code:
 
 ```sh
 claude mcp add chrome-devtools --scope user -- \
+  npx -y chrome-devtools-mcp@latest --isolated --viewport 1440x900
+claude mcp add chrome-personal --scope user -- \
   npx -y chrome-devtools-mcp@latest --autoConnect
 ln -s ~/IdeaProjects/skills/chrome-devtools ~/.claude/skills/chrome-devtools
 ```
@@ -58,11 +62,13 @@ Codex:
 
 ```sh
 codex mcp add chrome-devtools -- \
+  npx -y chrome-devtools-mcp@latest --isolated --viewport 1440x900
+codex mcp add chrome-personal -- \
   npx -y chrome-devtools-mcp@latest --autoConnect
 ln -s ~/IdeaProjects/skills/chrome-devtools/skills/chrome-devtools ~/.agents/skills/chrome-devtools
 ```
 
-For Claude Code also add the pacing hook from [setup.md](skills/chrome-devtools/references/setup.md#pacing-hook-claude-code) to `~/.claude/settings.json`. Restart the client afterwards, MCP tools load only at session start. Update with `git pull` in the clone. Connection details, optional flags and timeout notes are in [setup.md](skills/chrome-devtools/references/setup.md).
+For Claude Code also add the pacing hook from [setup.md](skills/chrome-devtools/references/setup.md#pacing-hook-claude-code) to `~/.claude/settings.json`. Restart the client afterwards, MCP tools load only at session start. Update with `git pull` in the clone. Details on both browsers, optional flags and timeout notes are in [setup.md](skills/chrome-devtools/references/setup.md).
 
 ## Credits and license
 

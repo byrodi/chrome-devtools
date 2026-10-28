@@ -1,13 +1,13 @@
 ---
 name: chrome-devtools
-description: Drives a real Chrome through the chrome-devtools MCP server for navigation, clicks and forms, DOM and network inspection, console, screenshots and performance traces. Use when WebFetch fails (client-side rendering, 403, redirect loops, captcha or access-denied stubs, logins), when debugging a live page, or when reading sites with anti-bot protection. Not for static pages WebFetch already reads.
+description: Drives a real Chrome through chrome-devtools MCP servers for navigation, clicks and forms, DOM and network inspection, console, screenshots and performance traces. A separate agent browser is the default, the user's everyday Chrome with their logins is used only when the task needs their session. Use when WebFetch fails (client-side rendering, 403, redirect loops, captcha or access-denied stubs, logins), when debugging a live page, or when reading sites with anti-bot protection. Not for static pages WebFetch already reads.
 ---
 
 # Chrome DevTools
 
 The generic sections of this skill are adapted from the `chrome-devtools` skill in [ChromeDevTools/chrome-devtools-mcp](https://github.com/ChromeDevTools/chrome-devtools-mcp) (Apache-2.0). The WebFetch fallback, pacing and no-bypass rules are local additions.
 
-`${CLAUDE_SKILL_DIR}` in this file is the folder that contains this SKILL.md. Claude Code substitutes it automatically, other agents should resolve it to that folder themselves. Machine setup (attaching to Chrome, MCP registration, useful flags) lives in `${CLAUDE_SKILL_DIR}/references/setup.md`. Read it only when the tools are missing or the browser does not start.
+`${CLAUDE_SKILL_DIR}` in this file is the folder that contains this SKILL.md. Claude Code substitutes it automatically, other agents should resolve it to that folder themselves. Machine setup (both browsers, MCP registration, useful flags) lives in `${CLAUDE_SKILL_DIR}/references/setup.md`. Read it only when the tools are missing or the browser does not start.
 
 ## When to switch from WebFetch to the browser
 
@@ -16,19 +16,31 @@ Try WebFetch first for ordinary pages. Move to the browser when one of these hap
 - The fetched HTML is an empty shell and the content is rendered client side.
 - The response is 403 or 429, or WebFetch follows an endless redirect chain that ends in 403.
 - The page is a captcha, a "confirm you are human" interstitial or an access-restricted stub.
-- The content needs a login. The agent works in the human's own Chrome, so existing logins apply. If a site is not signed in, the human signs in in that window.
+- The content needs a login. Use the human's browser, see below.
 - The task needs rendered state: network requests, console output, screenshots, layout or a performance trace.
 
 Tool names below assume the full tool set. A server started with `--slim` exposes only `navigate`, `evaluate` and `screenshot`, and this skill does not apply to it.
 
-## Core concepts
+## Two browsers
 
-The server attaches to the human's running Chrome (`--autoConnect`), it never launches its own browser or profile. If the tools fail to connect, ask the human to open Chrome and turn on remote debugging in `chrome://inspect/#remote-debugging`. Chrome shows a permission prompt on connect and a banner while it is controlled. Server flags are listed by `npx chrome-devtools-mcp@latest --help`. Optional tool groups need extra flags:
+Two MCP servers expose the same tools under different prefixes. Tool names in this file omit the prefix.
 
+The agent browser, server `chrome-devtools`, is the default. The server launches its own Chrome with a temporary profile (`--isolated`) on the first tool call and closes it when the session ends. It has no cookies, no logins and none of the human's tabs, and every agent session gets its own instance, so parallel sessions do not collide. The agent owns every tab there. Use it for public pages, sites WebFetch cannot read, localhost, layout, performance and console checks. The window is visible, so the human can solve a captcha or sign in there, but a login lasts only until the session ends.
+
+The human's browser, server `chrome-personal`, attaches to the Chrome the human uses every day (`--autoConnect`) with its tabs, cookies and logins. Use it only when the task needs that session: a page behind the human's login or company SSO, data from their account, a tab they have open, or when the human asks for their browser. Tell the human in one line that you are switching to their browser before the first call. Rules there:
+
+- Chrome may ask the human to allow remote debugging when the server connects, and it shows a banner while it is controlled. If the tools fail to connect, ask the human to open Chrome and turn on remote debugging in `chrome://inspect/#remote-debugging`.
+- `list_pages` returns every tab the human has open, including mail and account pages. Open your own tab with `new_page`, do not navigate away or close the human's tabs, and do not repeat tab URLs in replies beyond what the task needs. Close your own tab when done.
+- The accounts are the human's own. Read only. No purchases, messages, form submissions or settings changes unless the human asked for that exact action.
+- The server attaches to every open tab, and a frozen or busy background tab does not answer. Then every call hangs for about three minutes and fails with `Network.enable timed out`. Do not retry. Run `node "${CLAUDE_SKILL_DIR}/scripts/stuck-tabs.mjs"`, which lists the tabs that do not answer, ask the human to open or close them, then try once more.
+
+Server flags are listed by `npx chrome-devtools-mcp@latest --help`. Optional tool groups need extra flags:
+
+- Extension tools need `--categoryExtensions` and work only in the agent browser.
 - Heap snapshot analysis needs `--memoryDebugging`. `take_heapsnapshot` itself works without it.
 - Coordinate clicks (`click_at`) need `--experimentalVision`, screencasts need `--experimentalScreencast` and ffmpeg.
 
-Page-scoped tools require a `pageId`. Get IDs from `list_pages` or from the result of `new_page`. `list_pages` returns every tab the human has open, including mail and account pages. Open your own tab with `new_page` for the task, do not navigate away or close the human's tabs, and do not repeat tab URLs in replies beyond what the task needs.
+Page-scoped tools require a `pageId`. Get IDs from `list_pages` or from the result of `new_page`.
 
 Interaction goes through `take_snapshot`, which returns the accessibility tree with a `uid` for every element. Pass that `uid` to `click`, `fill`, `hover` and the other input tools. When an element is not found, take a fresh snapshot, the page may have changed.
 
@@ -64,7 +76,7 @@ Tool calls can run in parallel, but keep the order navigate, wait, snapshot, int
 
 ## Pacing (mandatory)
 
-Anti-bot systems mostly block by request rate from one IP, not by browser fingerprint. The browser is a real Chrome under the human's own profile, there is nothing to disguise. What gets a session blocked is loading pages faster than a person would, so the answer is pacing on every site.
+Anti-bot systems mostly block by request rate from one IP, not by browser fingerprint. Both browsers are a real Chrome, there is nothing to disguise. What gets a session blocked is loading pages faster than a person would, so the answer is pacing on every site.
 
 Every page load goes through `scripts/throttle.sh`. Before each load it picks a random interval between 1 and 5 seconds and waits until that much time has passed since the previous load of the same site, so loads never come at a fixed machine rhythm. Subdomains share the counter of their site. Local targets (localhost, loopback, private addresses, `file:`, `chrome:`) pass without a wait. `THROTTLE_MIN` and `THROTTLE_MAX` change the range.
 
@@ -72,7 +84,7 @@ The script also counts loads per site and session (the counter resets after 30 i
 
 A site that answers with captchas, 429 or access stubs at this pace needs fewer loads, not a longer script. Follow "If the site blocks you anyway" below.
 
-In Claude Code a PreToolUse hook runs the script before every `navigate_page` and `new_page` (reload, back and forward reuse the previous host), so do not call it yourself for those tools. Call it by hand in these cases:
+In Claude Code a PreToolUse hook runs the script before every `navigate_page` and `new_page` on both servers (reload, back and forward reuse the previous host), so do not call it yourself for those tools. Call it by hand in these cases:
 
 - Before a `click`, `press_key` or form submit that loads a new page. Pass the target URL, or no argument to reuse the host of the previous load.
 - Before each `fetch` against the site from `evaluate_script`. A request to the site's API counts as a load.
@@ -113,11 +125,11 @@ Check in this order:
 1. Stop. Reloading in a loop extends the ban.
 2. If the stub has a "Continue" style button leading to a captcha, press it once. The human solves the captcha in the browser window.
 3. Back off for 2 to 5 minutes, then try once more.
-4. If that fails, hand the task to the human: they open the pages in the same Chrome window and you read the result. It is the same browser, so the session carries over.
+4. If that fails, hand the task to the human: they open the pages in the window you work in and you read the result. It is the same browser, so the session carries over. When the agent browser stays blocked, ask whether to continue in the human's browser, where their cookies and history make the session warm.
 
 ## Never bypass protections
 
-Do not build, configure or suggest any of the following, even when asked: automatic captcha solving or captcha solving services, anti-detect browsers, residential proxy pools or IP rotation (including `--proxyServer` for that purpose), user-agent or TLS fingerprint spoofing (including the `userAgent` option of `emulate` used to disguise the agent), and mouse movement emulation meant to fool behavioral analysis. Site terms forbid it and it is not needed here, correct pacing is enough. Captchas are solved by the human in the open browser window. Explain this briefly and offer the human-in-the-loop path from the section above.
+Do not build, configure or suggest any of the following, even when asked: automatic captcha solving or captcha solving services, anti-detect browsers, residential proxy pools or IP rotation (including `--proxyServer` for that purpose), user-agent or TLS fingerprint spoofing (including the `userAgent` option of `emulate` used to disguise the agent), hiding the automation flag of the agent browser (`--ignoreDefaultChromeArg=--enable-automation`, patching `navigator.webdriver`), and mouse movement emulation meant to fool behavioral analysis. Site terms forbid it and it is not needed here, correct pacing is enough. Captchas are solved by the human in the open browser window. Explain this briefly and offer the human-in-the-loop path from the section above.
 
 ## Troubleshooting
 

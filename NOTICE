@@ -20,12 +20,14 @@ Modifications made to the upstream text:
   responseFilePath, includeSnapshot default, waitForStableDom, flags for
   optional tool groups, file path restrictions).
 - Reworded list items that used bold labels.
-- Limited the skill to attaching to the user's running Chrome (--autoConnect):
-  rewrote the core concepts, removed the extension testing section and the
-  extension tools flag, which need a browser launched by the server.
+- Split the core concepts into a default agent browser launched by the server
+  with a temporary profile and the user's running Chrome attached with
+  --autoConnect for tasks that need the user's session. Removed the extension
+  testing section.
 - Added sections on switching from WebFetch to the browser, pacing for every
   site with scripts/throttle.sh and a Claude Code hook, diagnosing blocks
   and a rule against bypassing anti-bot protections.
 
-scripts/throttle.sh, scripts/throttle-hook.sh, references/setup.md, README.md and the plugin manifest
-are original to this repository.
+scripts/throttle.sh, scripts/throttle-hook.sh, scripts/stuck-tabs.mjs,
+references/setup.md, README.md and the plugin manifest are original to this
+repository.
